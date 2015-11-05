@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Needezo</title>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,800' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="/build/main.js"></script>
+  </body>
+
+  <script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '882491241799671',
+      xfbml      : true,
+      version    : 'v2.5'
+    });
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+</script>
+<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="/javascript/client/util/jquery.iframe-transport.js"></script>
+<script type= "text/javascript" src = "/countries.js"></script>
+
+</html>
