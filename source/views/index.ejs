@@ -7,8 +7,9 @@
     <link rel="stylesheet" type="text/css" href="/css/style.css">
   </head>
   <body>
+
     <div id="app"></div>
-    <script src="/build/main.js"></script>
+    
   </body>
 
   <script>
@@ -21,15 +22,23 @@
   };
 
   (function(d, s, id){
+
+    <% if (user) { %>
+     window.localStorage.setItem('login',true);
+    <% } %>
      var js, fjs = d.getElementsByTagName(s)[0];
      if (d.getElementById(id)) {return;}
      js = d.createElement(s); js.id = id;
      js.src = "//connect.facebook.net/en_US/sdk.js";
      fjs.parentNode.insertBefore(js, fjs);
    }(document, 'script', 'facebook-jssdk'));
+
+
 </script>
+
 <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 <script src="/javascript/client/util/jquery.iframe-transport.js"></script>
 <script type= "text/javascript" src = "/countries.js"></script>
+<script src="/build/main.js"></script>
 
 </html>

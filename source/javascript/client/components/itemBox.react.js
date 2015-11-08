@@ -24,7 +24,7 @@ export default class ItemBox extends Component {
 						display:'inline',
 						float:'left',
 				    marginTop: '10px',
-   					marginLeft: '5px'}}>Playstation 4</span>
+   					marginLeft: '5px'}}>{this.props.data.title}</span>
 
 						<div style={{fontSize:'12px',display:'inline',float:'right',
 				    marginTop: '10px',
@@ -36,9 +36,9 @@ export default class ItemBox extends Component {
 					</div>
 					<div style={{marginTop:'0px',marginLeft:'10px',marginBottom:'10px',marginRight:'10px'}}>
 						<div className="text">
-							{this.props.data}
+							{this.props.data.description}
 						</div>
-						<img src="https://psmedia.playstation.com/is/image/psmedia/ps4-system-imageblock-us-13jun14?$TwoColumn_Image$"/>
+						<img src={this.props.data.imageUrl[0]}/>
 					</div>
 					<div className="itemFooter">
 						<span style={{fontSize:'12px',color:'#244470',

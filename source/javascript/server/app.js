@@ -272,23 +272,31 @@ app.get('/logout', function(req, res){
 });
 
 app.get('/fetchItems/:page', function(req, res){
-  var page = req.params.page;
-  if(typeof page != "Number")
-    return;
+  var page = parseInt(req.params.page);
+  var typeoff = typeof(page) ;
+  if(typeoff !== "number"){
+    if(typeoff !== "number"){
+      res.json({status:false,message:"Something went wrong"});
+      return;
+    }
+  }
 
   if(page > 20){
+    res.json({status:false,message:"Something went wrong"});
     return;
   }
   if(page < 0){
     page = 0;
   }
 
+  console.log("fetchItems")
   itemModel.find({}).
-  skip(page * 40)
+  skip(page * 40).
   limit(40).
   select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1, }).
   exec(function(err, items){
     if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+    
     res.json({status:true,items:items});
   });
 })
