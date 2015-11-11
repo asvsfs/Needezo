@@ -1,0 +1,14 @@
+body{
+	background: #fcfcfc;
+	font-family: 'Open Sans', sans-serif;
+}
+
+p {
+	word-wrap:break-word;
+	font-size:13px;
+}
+
+.itemContainer{
+	width:600px;
+	word-wrap:break-word;
+}

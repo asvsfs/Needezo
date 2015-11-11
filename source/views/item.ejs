@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Needezo</title>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,800' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="/css/itemstyle.css">
+  </head>
+  <body>
+
+    <div class="itemContainer" >
+      
+      <h2><%= item.title %></h2>
+
+      <% item.imageUrl.forEach(function(url){ %>
+        <img src="<%= url %>" />
+      <% })%>
+
+      <p><%= item.description %> </p>
+
+      <% if (item.questions) {%>
+        <% item.questions.forEach(function(q){ %>
+          <ul>
+            <li/><%=q%></li>
+          </ul> 
+        <% })%>
+      <%  } %>
+
+
+    </div>
+    
+  </body>
+
+  <script>
+
+  </script>
+
+  <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+
+</html>

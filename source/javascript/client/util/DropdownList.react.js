@@ -23,12 +23,12 @@ export default class DropdownList extends Component {
 	render(){
 		var self =this;
 		const menu = this.props.children.map((item,index)=>{
-			return (<li style={{display:'block'}} key={index}>{item}</li>);
+			return (<li style={{display:'block',width:'400px'}} key={index}>{item}</li>);
 		})
 
 		return (
 				<div ref="div" className="dropdown" >
-					<li id="dropdownControl" style={{display:'inline',position:'absolute'}} onClick={this.onClick.bind(this)}		 ><a href="#">Menu</a></li>
+					<li id="dropdownControl" style={{display:'inline'}} onClick={this.onClick.bind(this)}		 ><a href="#">Menu</a></li>
 					{self.state.isOpen == true ? 
 						<ul style={{position:'absolute',display:'inline',margin:'0',marginRight:'10px',marginTop:'25px',padding:'0'}}>
 							{menu}
@@ -42,8 +42,6 @@ export default class DropdownList extends Component {
 
 	onClick(event){
 		this.setState({isOpen:!this.state.isOpen})
-		//event.stopPropagation();
-		//return false;
 	}
 
 }

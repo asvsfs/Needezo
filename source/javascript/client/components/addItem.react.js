@@ -2,11 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import Component from 'react-pure-render/component';
 import {Link, RouteHandler} from 'react-router';
+import http from 'superagent';
 export default class AddItem extends Component {
 
 	constructor(props) {
     super(props);
-    this.state = {imageUrl:null,Urls:[],enlargeImageModal:false,s:false,location:null,country:null,state:null}
+    this.state = {imageUrl:null,Urls:[],enlargeImageModal:false,s:false,location:{},country:null,state:null}
   }
 
 	componentDidMount(){
@@ -16,7 +17,6 @@ export default class AddItem extends Component {
 
 	render(){
 		var self = this;
-		console.log("render ")
 		const otherImages = this.state.Urls.map((value,i)=>{
 
 			return (<div key={i+'b'} style={{maxHeight:'75px',maxWidth:'75px',position:'relative'}}><img src={value} style={{display:'inline',maxHeight:'75px',maxWidth:'75px',marginBottom:'10px'}} key={i} onClick={self.enlargeImage.bind(self,i)} />
@@ -36,8 +36,10 @@ export default class AddItem extends Component {
 					<div style={{}}>
 						<input type="text" id="title" ref="title" placeholder="Title..."  style={{display:'block',marginBottom:'10px',width:'100%'}} required />
 						<textarea  id="editArea" ref="description" placeholder="Description of what you need " style={{marginBottom:'15px'}} required></textarea>
-						Select your Country: <select style={{display:'block'}} id = "country" name="Country" onChange={(e)=>{this.setState({country:e.options[e.selectedIndex]})}}></select><br/>
-						Select your State: <select style={{display:'block',marginBottom:'10px'}} id = "state" onChange={(e)=>{this.setState({state:e.options[e.selectedIndex]})}} name="State"></select>
+						Select your Country: <select style={{display:'block'}} id = "country" name="Country" onChange={(e)=>{this.setState({country:e.target.options[e.target.selectedIndex].value})}}></select><br/>
+						Select your State: <select style={{display:'block',marginBottom:'10px'}} id = "state" onChange={(e)=>{this.setState({state:e.target.options[e.target.selectedIndex].value})}} name="State"></select>
+
+						<input type="text" ref="price" placeholder="Proposed price ..." className="search" style={{display:'inline',marginBottom:'10px',marginRight:'10px'}} onChange={this.onPriceChanged.bind(this)} />
 						<input type="checkbox" name="location" ref="location" value="Location" id="location" onChange={this.onLocationOptionChange.bind(self)} style={{marginBottom:'10px'}}/> Use my location
 						<span style={{fontSize:"10px" }}> we dont use your exact location, and nobody is able to see it </span>
 						<div style={{display:'block'}}>
@@ -54,6 +56,7 @@ export default class AddItem extends Component {
 	}
 
 	addItem(){
+		var self = this;
 		if(this.refs.title.value.length < 1){
 			alert("please enter a valid title");
 			return;
@@ -62,25 +65,49 @@ export default class AddItem extends Component {
 			alert("atleast 100 character is needed for description");
 			return;
 		}
-
+		var x = self.state.location.x;
+		var y = self.state.location.y;
 		var itemToAdd = {
 			title:this.refs.title.value,
 			description:this.refs.description.value,
-			imageUrls:this.Urls,
+			imageUrls:self.state.Urls,
 			country:this.state.country,
+			price:this.refs.price.value,
 			state:this.state.state,
-			location:this.state.location
+			location:{x,y}
 		}
-		$.post("/tk/addItem",
-			itemToAdd,
-			function(data,status,jqxhr){
-				alert(jqxhr)
-			},
-			'json');
+
+		this.props.loading(true)
+		http
+      .post("/tk/addItem")
+      .send(itemToAdd)
+      .accept('application/json')
+      .end(function(err, res){
+      	self.props.loading(false)
+        if(err){
+          console.log(err)
+        }else {
+
+        	if(res.body.status == false){
+        		alert(res.body.message)
+        		return;
+        	}
+        	self.setState({items:res.body.items || [],page:self.state.page+1,listHasChanged:true});
+          alert(res.body.message)
+        }
+      });
+
+      self.props.onRequestClose();
+
 	}
+
+	onPriceChanged(){
+
+	}
+
 	onLocationOptionChange(){
+		var self = this;
 		if(this.refs.location.checked){
-		 //var output = document.getElementById("out");
 
 	  if (!navigator.geolocation){
 	    alert("Geolocation is not supported by your browser");
@@ -90,7 +117,7 @@ export default class AddItem extends Component {
 	  function success(position) {
 	    var latitude  = position.coords.latitude;
 	    var longitude = position.coords.longitude;
-	    this.setState({location:{x:longitude,y:latitude}});
+	    self.setState({location:{x:latitude,y:longitude}});
 	    alert("done")
 	  };
 

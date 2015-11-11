@@ -4,6 +4,9 @@ var Schema = mongoose.Schema;
 var questionSchema = new Schema({
 	text:String,
 	replies:[{body:String,date:Date}],
+	inquirerId:String,
+	userId:String,
+	itemId:String,
 	date:Date
 });
 

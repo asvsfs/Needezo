@@ -18,7 +18,19 @@ var express           =     require('express')
   , graph             =     require('fbgraph')
   , uuid              =     require('node-uuid')
   // , Hapi            =     require('hapi')
-  ,bcrypt = require('bcrypt-nodejs')
+  , bcrypt = require('bcrypt-nodejs')
+
+
+
+
+var geocoderProvider = 'google';
+var httpAdapter = 'https';
+// optionnal 
+var extra = {
+    apiKey: 'AIzaSyDDcReNxUgzw-WFMEvp3Pj7tTPZD6gyZGs', // for Mapquest, OpenCage, Google Premier 
+    formatter: null         // 'gpx', 'string', ... 
+};
+var geocoder = require('node-geocoder')(geocoderProvider, httpAdapter, extra);
 
 
 import {questionModel, userModel, itemModel, activateLinkModel} from "./db/models.js";
@@ -66,6 +78,7 @@ app.set('views', 'source/views');
 app.set('view engine', 'ejs');
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 app.use(session({ secret: 'keyboard cat', key: 'sid',
     resave: true,
     saveUninitialized: true}));
@@ -81,12 +94,12 @@ app.use(express.static('public'));
 
 //Router code
 app.all('/tk/*',ensureAuthenticated,function(req, res, next){
+  console.log(req.body)
   // check header or url parameters or post parameters for token
   var token = req.body.token || req.query.token || req.headers['x-access-token'] || req.cookies.token;
 
   // decode token
   if (token) {
-
     // verifies secret and checks exp
     jwt.verify(token, app.get('superSecret'), function(err, decoded) {      
       if (err) {
@@ -108,16 +121,46 @@ app.all('/tk/*',ensureAuthenticated,function(req, res, next){
     });
     
   }
+
+  console.log("END AUTH")
 });
 
 app.get('/', function(req, res){
-  var theToken = null
-  
+var theToken = null
   if(req.cookies.token != undefined) { 
     //onsole.log(res.cookie('token'))
     theToken = req.cookies.token
+
+    if(req.user == null){
+      jwt.verify(theToken, app.get('superSecret'), function(err, decoded) {
+        if (err) {
+          res.render('index', { user: null , token: null });
+        } else {
+          req.logIn(decoded, function(err) {
+            if (err) { res.render('index', { user: null , token: null });return;}
+            var token = jwt.sign(result, app.get('superSecret'), {
+              expiresIn: 1440 *60// expires in 24 hours
+            });
+            req.token = token;
+            res.cookie('token',token);
+            res.cookie('name',user.displayName);
+            req.user = decoded;    
+            res.render('index', { user: req.user , token: theToken });  
+          });
+          
+        }
+      });
+    }else{
+       res.render('index', { user: req.user , token: theToken });  
+    }
+
+  }else{
+    res.render('index', { user: req.user , token: theToken });  
   }
-  res.render('index', { user: req.user , token: theToken });
+});
+
+app.get('/help', function(req, res){
+  res.render('help', {});
 });
 
 
@@ -128,23 +171,33 @@ app.get('/account', ensureAuthenticated, function(req, res){
 
 app.get('/auth/facebook', passport.authenticate('facebook',{authType: 'rerequest',scope:['publish_pages','publish_actions','email']} ));
 
-app.post('/login',
-  passport.authenticate('local', { successRedirect: '/',
-                                   failureRedirect: '/login',
-                                   failureFlash: true })
-);
+app.post('/login', function(req, res, next) {
+  passport.authenticate('local', function(err, user, info) {
+    if (err) { return next(err); }
+    if (!user) { return res.json({status:false,message:'User/Password wrong'}); }
+    req.logIn(user, function(err) {
+      if (err) { return next(err); }
+      var token = jwt.sign(user, app.get('superSecret'), {
+                expiresIn: 1440 *60 // expires in 24 hours
+              });
+          req.token = token;
+          res.cookie('token',token);
+          req.user.userId = user._id;
+          return res.json({status:true,message:'Welcome'});
+    });
+  })(req, res, next);
+});
+
 app.get('/login', function(req, res, next){
-  console.log("HEY");
   res.send("WHta?")
 })
+
 app.post('/login', function(req, res, next) {
 
-  // generate the authenticate method and pass the req/res
   passport.authenticate('local', function(err, user, info) {
     if (err) { return next(err); }
     if (!user) { return res.json({status:false,message:'authentication failed'}); }
 
-    // req / res held in closure
     req.logIn(user, function(err) {
       if (err) { return next(err); }
       var token = jwt.sign(result, app.get('superSecret'), {
@@ -153,7 +206,6 @@ app.post('/login', function(req, res, next) {
       req.token = token;
       res.cookie('token',token);
       res.cookie('name',user.displayName);
-     // return res.redirect('/');
       return res.json({status:true,user:user});
     });
 
@@ -168,7 +220,7 @@ app.get('/auth/facebook/callback', function(req, res, next) {
     if (err) { return next(err); }
 
     var user = data.profile;
-    if (!user) { return res.redirect('/login'); }
+    if (!user) {console.log("no user"); return res.redirect('/login'); }
     req.logIn(user, function(err) {
       if (err) { return next(err); }
 
@@ -194,6 +246,7 @@ app.get('/auth/facebook/callback', function(req, res, next) {
                 req.token = token;
                 res.cookie('token',token);
                 res.cookie('name',fbDisplayName);
+                req.user.userId = result._id;
                 sendWelcomeEmail(user.email);
                 return res.redirect('/');
               })
@@ -204,10 +257,9 @@ app.get('/auth/facebook/callback', function(req, res, next) {
           req.token = token;
           res.cookie('token',token);
           res.cookie('accessToken',accessToken);
-
+          req.user.userId = document._id;
           return res.redirect('/');
         }
-        console.log(user)
         
       })
     });
@@ -267,12 +319,18 @@ app.get('/signup',function(req, res){
 
 
 app.get('/logout', function(req, res){
-  req.logout();
-  res.redirect('/');
+  //req.logout();
+  req.session.destroy(function (err) {
+    res.clearCookie('token')
+    res.redirect('/');
+  }); 
 });
 
-app.get('/fetchItems/:page', function(req, res){
+app.post('/fetchItems/:page', function(req, res){
+  console.log(req.body)
   var page = parseInt(req.params.page);
+  var filter = req.body.filter;
+  var location = req.body.location || [0,0];
   var typeoff = typeof(page) ;
   if(typeoff !== "number"){
     if(typeoff !== "number"){
@@ -288,22 +346,77 @@ app.get('/fetchItems/:page', function(req, res){
   if(page < 0){
     page = 0;
   }
-
-  console.log("fetchItems")
-  itemModel.find({}).
-  skip(page * 40).
-  limit(40).
-  select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1, }).
-  exec(function(err, items){
-    if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+  var distance = 10000 / 6371;
+  
+  if (filter)  {
     
-    res.json({status:true,items:items});
-  });
+    if (filter.location) {
+      if (req.body.location !== undefined) {
+        location = [location.x,location.y];
+        itemModel.find(
+          {
+            location:{
+              $near:{
+                $geometry : {
+                  type : "Point" ,
+                  coordinates : location 
+                },
+                $maxDistance:distance}
+            }
+        }).
+        skip(page * 40).
+        limit(40).
+        select({ title:1, description:1, price:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1 }).
+        exec(function(err, items, stats) {
+          if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+          res.json({status:true,items:items});
+
+        });
+      } else  {
+        itemModel.find({}).
+        skip(page * 40).
+        limit(40).
+        select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
+        exec(function(err, items) {
+          if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+          res.json({status:true,items:items});
+
+        });
+      }
+    } else  if (filter.date)  {
+      itemModel.find({}).
+        sort({date:-1}).
+        skip(page * 40).
+        limit(40).
+        select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
+        exec(function(err, items) {
+          if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+          res.json({status:true,items:items});
+
+        });
+    } else  if (filter.category) {
+
+    };
+  } else  {
+    itemModel.find({}).
+    skip(page * 40).
+    limit(40).
+    select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
+    exec(function(err, items) {
+      if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+      res.json({status:true,items:items});
+
+    });
+
+  }
+  
+  
 })
 
-app.post('/tk/addItem/', function(req, res){
+app.post('/tk/addItem/', function(req, res) {
   var start = process.hrtime();
   start = start[1];
+  console.log(req.body)
   var title = req.body.title;
   var description = req.body.description;
   var imageUrls = req.body.imageUrls;
@@ -315,13 +428,40 @@ app.post('/tk/addItem/', function(req, res){
   var item = null;
   
 
-  if(location.x === undefined){
-    console.log("S")
-    location = [0,0]
+  if (location.x === undefined)  {
+
+    if ( state !== undefined && country !== undefined)  {
+      geocoder.geocode(state + " " + country).then((resL)=>{
+        req.body.location.x = resL[0].latitude;
+        req.body.location.y = resL[0].longitude;
+        addItem(req);
+      }).catch((err)=>{
+        console.log(err)
+      });
+    } else  {
+      req.body.location.x =0;
+      req.body.location.y =0;
+      addItem(req);
+    }
+    
   }else{
-    location = [location.x,location.y];
+    addItem(req);
   }
-  try{
+
+  function addItem(req){
+    var start = process.hrtime();
+    start = start[1];
+    var title = req.body.title;
+    var description = req.body.description;
+    var imageUrls = req.body.imageUrls;
+    console.log(imageUrls);
+    var location = [req.body.location.x,req.body.location.y];
+    var state = req.body.state;
+    var country = req.body.country;
+    var displayName = req.user.displayName;
+    var price = req.body.price;
+    var item = null;
+    try{
     item = new itemModel({date:new Date(), 
       price:price, 
       userId:req.user.userId, 
@@ -329,30 +469,24 @@ app.post('/tk/addItem/', function(req, res){
       title:title, 
       description:description, 
       location:location, 
-      imageUrls:imageUrls, 
+      imageUrl:imageUrls, 
       state:state, 
       country:country });
 
-  }catch(e){
-    res.json({status:false,message:'Something went wrong'});
-    console.log(e);
-    return ; 
+    } catch (e) {
+      res.json({status:false,message:'Something went wrong'});
+      console.log(e);
+      return ; 
+    }
+
+    if  (item == null)
+      res.json({status:false,message:'Something went wrong'});
+
+    item.save(function (err) {
+      if (err) {res.json({status:false,message:'Something went wrong'}); console.log(err);return;};
+      res.json({status:true,message:'Item has been added'});
+    })
   }
-  if(item == null)
-    res.json({status:false,message:'Something went wrong'});
-  // MongoDB will create the _id when inserted
-  item.save(function (err) {
-    if (err) {res.json({status:false,message:'Something went wrong'}); console.log(err);return;};
-      if((process.hrtime()[1]-start)* 1e-6  < 1300)
-      {
-        setTimeout(function() {
-          res.json({status:true,message:'Item has been added'});
-        },1300 - (process.hrtime()[1]-start)*1e-6);
-      }else{
-        res.json({status:true,message:'Item has been added'});
-      }
-     
-  })
 
 })
 
@@ -364,12 +498,13 @@ app.post('/tk/deleteItem',function(req, res){
   });
 })
 
-//app.post('/tk/updateItem')
 
 app.post('/tk/fetchItems/:page',function(req, res){
+  console.log(req.body)
+  console.log(req.user.userId)
+
   var page = req.params.page;
-  if(typeof page != "Number")
-    return;
+
 
   if(page > 20){
     return;
@@ -379,9 +514,9 @@ app.post('/tk/fetchItems/:page',function(req, res){
   }
 
   itemModel.find({userId:req.user.userId}).
-  skip(page * 40)
+  skip(page * 40).
   limit(40).
-  select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1, }).
+  select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1, date:1}).
   exec(function(err, items){
     if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
     res.json({status:true,items:items});
@@ -442,7 +577,7 @@ passport.use(new LocalStrategy(
       if (!user) {
         return done(null, false, { message: 'Incorrect username.' });
       }
-      if(!bcrypt.compareSync(req.body.password, doc.password)){
+      if(!bcrypt.compareSync(password, user.password)){
         return done(null, false, { message: 'Incorrect password.' });
       }
 
@@ -465,7 +600,7 @@ app.post('/signupemail',function(req, res){
   if(req.body.displayName < 1)
     res.json({status:false,message:'DisplayName is empty'});
 
-  var email = req.username;
+  var email = req.body.username;
   var filter = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
 
   if (!filter.test(email)) {
@@ -478,7 +613,6 @@ app.post('/signupemail',function(req, res){
  
   userModel.findOne({email:email},function(err, doc){
     if(doc !== null){
-      console.log(doc)
         res.json({status:false,message:'Email has been used!'});  
         return;
     }else{
@@ -489,7 +623,7 @@ app.post('/signupemail',function(req, res){
 })
 
 function singup(req,res,hash){
-  var email = req.username;
+  var email = req.body.username;
   var uniqueID = uuid.v4();
   var user = new userModel({active:false, displayName:req.body.displayName, password:hash, date:new Date(), facebookId:null,email:email, items:[] })
   
@@ -504,7 +638,7 @@ function singup(req,res,hash){
     // send mail
     transporter.sendMail({
         from: 'finger.9a@gmail.com',
-        to: 'anasvsfs@gmail.com',
+        to: email,
         subject: 'Needezo Email Activation',
         text: 'Please click on '+ "http://localhost:3000/activate/"+uniqueID
     }, function(error, response) {
@@ -553,6 +687,105 @@ app.post('/oauth2callback',function(req,res){
 
   console.log("SOMEHITN CAME")
 })
+
+app.post('/tk/question',function(req,res){
+
+  var question = req.body.question ;
+  var inquirerId = req.user.userId;
+  var itemId = req.body.itemId;
+
+  console.log(req.body)
+  itemModel.findOne({_id:new ObjectId(itemId)},function (err, doc){
+    console.log(doc);
+    if(err){res.json({status:false,message:'something went wrong'});console.log(err);return;}
+
+    if(doc != null){
+      var userBeingAskedId = doc.userId;
+      var newQuestion = new questionModel({text:question,inquirerId:inquirerId,userId:userBeingAskedId,itemId:itemId,date:new Date()}).
+      save(function (err,q){
+        console.log(q)
+        if(err){res.json({status:false,message:'something went wrong'});console.log(err);return;}
+        if(q == null){
+           res.json({status:false,message:'something went wrong'});return;
+         }
+         
+         doc.questions.push(q);
+         
+         doc.save(function (err,usr){
+          console.log(usr)
+          if(err){return res.json({status:false,message:'something went wrong'});console.log(err);}
+          
+          if(usr == null)
+            return res.json({status:false,message:'something went wrong'});
+           
+          res.json({status:true,message:'Question has been added'}); 
+         })
+         
+      })
+    }else{
+      res.json({status:false,message:'something went wrong'});return;
+    }
+  })
+  //questionModel.findOne({inquirerId:})
+})
+
+app.post('/tk/reply',function (req,res){
+  var questionId  = req.body.questionId;
+  var reply = req.body.reply;
+  questionModel.findOne({_id:new ObjectId(questionId)},function(err, doc){
+    doc.replies.push(reply);
+    doc.save();
+  })
+})
+
+app.post('/tk/questionlist',function (req,res){
+  var userId = req.user.userId;
+
+  questionModel.find({userId:userId},function (err, doc){
+    if(err){res.json({status:false,message:'something went wrong'});console.log(err);return;}
+
+    if(doc != null){
+      res.json({status:true,questions:doc});return;
+    }else{
+      res.json({status:false,message:'something went wrong'});return;      
+    }
+  })
+})
+
+app.get('/logout', function (req, res){
+  req.logout();
+  res.redirect('/');
+});
+
+app.get('/item/:itemid', function (req,res) {
+  var isOkay = 0 ; 
+  var token = req.cookies.token;
+
+  jwt.verify(token, app.get('superSecret'), function(err, decoded) {
+    if (err) {
+     // return res.send( 'Failed to authenticate.');    
+      req.user = {_id:0}
+    } else {
+      req.user = decoded;    
+      console.log(decoded)
+    }
+    
+    itemModel.findOne({_id:new ObjectId(req.params.itemid)})
+    .select({ title:1 , description:1 , imageUrl: 1,questions : 1,userId : 1})
+    .exec(function (err, doc){
+      if(err){return res.send("Something went wrong");}
+      if(req.user._id != doc.userId){
+        console.log("user is different")
+        doc.questions = [];
+        doc.userId = "";
+      }
+      console.log(doc)
+      console.log(req.user)
+      res.render("item",{item:doc});  
+    })
+  });
+})
+
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { return next(); }
   res.redirect('/login')
