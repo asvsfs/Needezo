@@ -1,18 +1,28 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Router, Route, Link } from 'react-router'
 import App from './app/app.react.js';
 import ShopHome from './shop/shop.react.js';
-// // TODO: Add app storage example.
-// // import storage from 'redux-storage';
+import Category from './category/categoryPage.react.js';
+import MainPage from './mainpage/mainPage.react.js';
+import MyItem from './pages/myitem.react.js';
 
+// using an ES6 transpiler, like babel
+import { Router, Route, Link, IndexRoute } from 'react-router'
 
 
 export default function main() {
 const app = document.getElementById('app');
 
 	ReactDOM.render(
-	<App/>
+	<Router>
+    <Route path="/" component={App}>
+      <Route path="/category" component={Category}/>
+      <IndexRoute component={MainPage}/>
+      <Route path="/cat/:cat" component={MainPage}/>
+      <Route path="/myitem" component={MyItem}/>
+
+    </Route>
+  </Router>
   , 
 	  app
 	);

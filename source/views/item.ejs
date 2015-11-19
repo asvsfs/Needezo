@@ -13,7 +13,7 @@
       <h2><%= item.title %></h2>
 
       <% item.imageUrl.forEach(function(url){ %>
-        <img src="<%= url %>" />
+        <img src="<%= url %>" style="max-width:400px"/>
       <% })%>
 
       <p><%= item.description %> </p>

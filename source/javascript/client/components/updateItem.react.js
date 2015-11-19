@@ -5,7 +5,7 @@ import {Link, RouteHandler} from 'react-router';
 import http from 'superagent';
 
 
-export default class AddItem extends Component {
+export default class UpdateItem extends Component {
 
 	constructor(props) {
     super(props);
@@ -13,14 +13,16 @@ export default class AddItem extends Component {
   }
 
 	componentDidMount(){
-
+		this.props.loading(true)
 		populateCountries("country", "state");
+		this.setState({Urls:this.props.detail.imageUrl,imageUrl:this.props.detail.imageUrl[0]});
 
 		http
 		.get("/categorylist")
 		.accept('application/json')
 		.end(function (err, res){
 			this.setState({categoryList:res.body.categoryList});
+			this.props.loading(false)
 		});
 	}
 
@@ -33,7 +35,10 @@ export default class AddItem extends Component {
 				</div>);
 		})
 		const categories = this.state.categoryList.map((cat,i)=>{
-			<Link to="/itemcat/:cat" key={i}>{cat.name}</Link>
+			if( cat == self.props.detail.category)
+				<option value={cat} key={i} selected/>
+			else
+				<option value={cat} key={i}/>
 		})
 		return (
 				<div ref="div" className="addItem" >
@@ -46,11 +51,15 @@ export default class AddItem extends Component {
 				
 				<div style={{}}>
 					<div style={{}}>
-						<input type="text" id="title" ref="title" placeholder="Title..."  style={{display:'block',marginBottom:'10px',width:'100%'}} required />
-						<textarea  id="editArea" ref="description" placeholder="Description of what you need " style={{marginBottom:'15px'}} required></textarea>
+						<input type="text" value={this.props.detail.title} id="title" ref="title" placeholder="Title..."  style={{display:'block',marginBottom:'10px',width:'100%'}} required />
+						<textarea  id="editArea" ref="description" placeholder="Description of what you need " style={{marginBottom:'15px'}} value={this.props.detail.description} required></textarea>
+						<span>Current County : {this.props.detail.country} </span>
+						<span>Current State : {this.props.detail.state} </span>
 						Select your Country(Optional): <select style={{display:'block'}} id = "country" name="Country" onChange={(e)=>{this.setState({country:e.target.options[e.target.selectedIndex].value})}}></select><br/>
 						Select your State(Optional): <select style={{display:'block',marginBottom:'10px'}} id = "state" onChange={(e)=>{this.setState({state:e.target.options[e.target.selectedIndex].value})}} name="State"></select>
-						Select the Category(Optional): <select style={{display:'block',marginBottom:'10px'}} id = "category" onChange={(e)=>{this.setState({category:e.target.options[e.target.selectedIndex].value})}} name="Category"></select>
+						Select the Category(Optional): <select style={{display:'block',marginBottom:'10px'}} id = "category" onChange={(e)=>{this.setState({category:e.target.options[e.target.selectedIndex].value})}} name="Category">
+						{categories}
+						</select>
 
 						<input type="checkbox" name="location" ref="location" value="Location" id="location" onChange={this.onLocationOptionChange.bind(self)} style={{marginBottom:'10px'}}/> Use my location
 						<span style={{fontSize:"10px" }}> we dont use your exact location, and nobody is able to see it </span>
@@ -61,7 +70,7 @@ export default class AddItem extends Component {
 						<img  refs="imageholder" src={this.state.imageUrl} style={{display:'block',maxHeight:'300px',maxWidth:'300px',marginBottom:'10px'}} />
 						{otherImages}
 					</div>
-    			<input type="button" value="Share it" className="gbutton" style={{marginBottom:'10px',width:'204px'}} onClick={self.addItem.bind(self)}/> 
+    			<input type="button" value="Update it" className="gbutton" style={{marginBottom:'10px',width:'204px'}} onClick={self.addItem.bind(self)}/> 
 				</div>
 				</div>			
 			);
@@ -80,18 +89,18 @@ export default class AddItem extends Component {
 		var x = self.state.location.x;
 		var y = self.state.location.y;
 		var itemToAdd = {
+			id:this.props.detail.id,
 			title:this.refs.title.value,
 			description:this.refs.description.value,
 			imageUrls:self.state.Urls,
-			country:this.state.country,
-			//price:this.refs.price.value,
-			state:this.state.state,
+			country:self.state.country,
+			state:self.state.state,
 			location:{x,y}
 		}
 
 		this.props.loading(true)
 		http
-      .post("/tk/addItem")
+      .post("/tk/updateItem")
       .send(itemToAdd)
       .accept('application/json')
       .end(function(err, res){

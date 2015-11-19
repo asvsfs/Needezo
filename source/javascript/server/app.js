@@ -19,6 +19,7 @@ var express           =     require('express')
   , uuid              =     require('node-uuid')
   // , Hapi            =     require('hapi')
   , bcrypt = require('bcrypt-nodejs')
+  , moment = require('moment');
 
 
 
@@ -33,7 +34,7 @@ var extra = {
 var geocoder = require('node-geocoder')(geocoderProvider, httpAdapter, extra);
 
 
-import {questionModel, userModel, itemModel, activateLinkModel} from "./db/models.js";
+import {questionModel, userModel, itemModel, activateLinkModel, categoryModel} from "./db/models.js";
 
 
 app.set('superSecret', 'whatsnew'); // secret variable
@@ -332,6 +333,8 @@ app.post('/fetchItems/:page', function(req, res){
   var filter = req.body.filter;
   var location = req.body.location || [0,0];
   var typeoff = typeof(page) ;
+  var category = req.body.category;
+
   if(typeoff !== "number"){
     if(typeoff !== "number"){
       res.json({status:false,message:"Something went wrong"});
@@ -346,15 +349,9 @@ app.post('/fetchItems/:page', function(req, res){
   if(page < 0){
     page = 0;
   }
-  var distance = 10000 / 6371;
-  
-  if (filter)  {
-    
-    if (filter.location) {
-      if (req.body.location !== undefined) {
-        location = [location.x,location.y];
-        itemModel.find(
-          {
+  var distance = 100000;
+  location = [location.x,location.y];
+  var query = category !== undefined ?  {
             location:{
               $near:{
                 $geometry : {
@@ -362,8 +359,22 @@ app.post('/fetchItems/:page', function(req, res){
                   coordinates : location 
                 },
                 $maxDistance:distance}
-            }
-        }).
+            },
+            category:category
+        } : {location:{
+              $near:{
+                $geometry : {
+                  type : "Point" ,
+                  coordinates : location 
+                },
+                $maxDistance:distance}
+            }};
+
+
+  if (req.body.location !== undefined) {
+    console.log(query)
+    console.log(location)
+        itemModel.find(query).
         skip(page * 40).
         limit(40).
         select({ title:1, description:1, price:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1 }).
@@ -383,36 +394,78 @@ app.post('/fetchItems/:page', function(req, res){
 
         });
       }
-    } else  if (filter.date)  {
-      itemModel.find({}).
-        sort({date:-1}).
-        skip(page * 40).
-        limit(40).
-        select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
-        exec(function(err, items) {
-          if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
-          res.json({status:true,items:items});
 
-        });
-    } else  if (filter.category) {
+  // if (filter)  {
+    
+  //   if (filter.location) {
+  //     if (req.body.location !== undefined) {
+  //       location = [location.x,location.y];
+  //       itemModel.find(
+  //         {
+  //           location:{
+  //             $near:{
+  //               $geometry : {
+  //                 type : "Point" ,
+  //                 coordinates : location 
+  //               },
+  //               $maxDistance:distance}
+  //           }
+  //       }).
+  //       skip(page * 40).
+  //       limit(40).
+  //       select({ title:1, description:1, price:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1 }).
+  //       exec(function(err, items, stats) {
+  //         if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+  //         res.json({status:true,items:items});
 
-    };
-  } else  {
-    itemModel.find({}).
-    skip(page * 40).
-    limit(40).
-    select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
-    exec(function(err, items) {
-      if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
-      res.json({status:true,items:items});
+  //       });
+  //     } else  {
+  //       itemModel.find({}).
+  //       skip(page * 40).
+  //       limit(40).
+  //       select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
+  //       exec(function(err, items) {
+  //         if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+  //         res.json({status:true,items:items});
 
-    });
+  //       });
+  //     }
+  //   } else  if (filter.date)  {
+  //     itemModel.find({}).
+  //       sort({date:-1}).
+  //       skip(page * 40).
+  //       limit(40).
+  //       select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
+  //       exec(function(err, items) {
+  //         if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+  //         res.json({status:true,items:items});
 
-  }
+  //       });
+  //   } else  if (filter.category) {
+
+  //   };
+  // } else  {
+  //   itemModel.find({}).
+  //   skip(page * 40).
+  //   limit(40).
+  //   select({ title:1, description:1, price:1, location:1, city:1, country:1, lastEdit:1, imageUrl:1,date: 1,_id : 1  }).
+  //   exec(function(err, items) {
+  //     if (err){res.json({status:false,message:'Something went wrong'}); console.log(err);return;}
+  //     res.json({status:true,items:items});
+
+  //   });
+
+  // }
   
   
 })
 
+function formatDate(date){
+  var month = date.getMonth();
+  var date = date.getDate();
+  var year = date.getFullYear();
+  return (date+"/"+month+"/"+year);
+}
 app.post('/tk/addItem/', function(req, res) {
   var start = process.hrtime();
   start = start[1];
@@ -459,11 +512,14 @@ app.post('/tk/addItem/', function(req, res) {
     var state = req.body.state;
     var country = req.body.country;
     var displayName = req.user.displayName;
-    var price = req.body.price;
+    var nowDate = new Date();
     var item = null;
     try{
-    item = new itemModel({date:new Date(), 
-      price:price, 
+    item = new itemModel({
+      actualDate: nowDate,
+      date: moment().format("dddd, MMMM Do YYYY"),
+      lastEdit: nowDate, 
+      //price:price, 
       userId:req.user.userId, 
       displayName:displayName, 
       title:title, 
@@ -784,6 +840,15 @@ app.get('/item/:itemid', function (req,res) {
       res.render("item",{item:doc});  
     })
   });
+})
+
+app.get('/categorylist',function (req, res){
+  return res.json({status:true,categoryList:['IT','Graphic Design','Retail','Housing','Teaching','Service','Others']})
+  
+  categoryModel.find({}).exec(function (err,cats){
+    if(err){res.json({status:false,message:"Something went wrong"});return;}
+    res.json({status:true,categoryList:cats});
+  })
 })
 
 function ensureAuthenticated(req, res, next) {

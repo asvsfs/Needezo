@@ -25,15 +25,19 @@
     "mongoose": "^4.2.4",
     "react": "^0.14.2",
     "react-dom": "^0.14.2",
+    "react-redux": "^4.0.0",
     "react-tools": "^0.13.3",
     "reactify": "^1.1.1",
+    "redux": "^3.0.4",
     "superagent": "^1.4.0",
     "uglify": "^0.1.5",
     "vinyl-source-stream": "^1.1.0",
     "watchify": "^3.6.0",
     "xoauth2": "^1.1.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "redux-devtools": "^2.1.5"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

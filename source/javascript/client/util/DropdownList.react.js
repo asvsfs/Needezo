@@ -12,12 +12,12 @@ export default class DropdownList extends Component {
 	componentDidMount(){
 		var self = this;
 
-		// $(document).on('click', function(event) {
-		//   if (!$(event.target).closest('#dropdownControl').length) {
-		//     // Hide the menus.
-		//     //self.setState({isOpen:false});
-		//   }
-		// });
+		$(document).on('click', function(event) {
+		  if (!$(event.target).closest('#dropdownControl').length) {
+		    // Hide the menus.
+		    self.setState({isOpen:false});
+		  }
+		});
 	}
 
 	render(){
@@ -28,7 +28,7 @@ export default class DropdownList extends Component {
 
 		return (
 				<div ref="div" className="dropdown" >
-					<li id="dropdownControl" style={{display:'inline'}} onClick={this.onClick.bind(this)}		 ><a href="#">Menu</a></li>
+					<li id="dropdownControl" style={{display:'inline',cursor:'pointer',fontSize:'14px',fontWeight:'600'}} onClick={this.onClick.bind(this)}		 ><a >Menu</a></li>
 					{self.state.isOpen == true ? 
 						<ul style={{position:'absolute',display:'inline',margin:'0',marginRight:'10px',marginTop:'25px',padding:'0'}}>
 							{menu}

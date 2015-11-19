@@ -60,7 +60,7 @@ const loginStyle = {
  
   }
 }
-export default class App extends Component {
+export default class ItemPage extends Component {
 	constructor(props) {
 	    super(props);
 	    this.state={columns : [],count:0,colone:true,
