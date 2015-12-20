@@ -23,10 +23,9 @@ gulp.task('build', function () {
   .bundle()
   .pipe(source('bundle.js'))
   .pipe(gulp.dest('dist'));
+
 });
  
-gulp.task('tt', ['build']);
-
 
 function handleErrors() {
   var args = Array.prototype.slice.call(arguments);
@@ -71,6 +70,8 @@ function buildScript(file, watch) {
   return rebundle();
 }
 
+
+
 // run once
 gulp.task('scripts', function() {
   return buildScript('main.js', false);
@@ -80,4 +81,11 @@ gulp.task('scripts', function() {
 gulp.task('default', ['scripts'], function() {
   return buildScript('main.js', true);
 });
+
+
+// run 'scripts' task first, then watch for future changes
+gulp.task('item', function() {
+  return buildScript('item.js', true);
+});
+
 

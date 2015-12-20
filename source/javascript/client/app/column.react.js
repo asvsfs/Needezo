@@ -16,9 +16,9 @@ export default class Column extends Component {
 		var columns =[1,2,3,];
 		var cols = columns.map((val,index)=>{
 			return (<div> Hello </div>)
-		})
-		cols.push(<div> NA HELLO </div>)
-		console.log(cols)
+		});
+		cols.push(<div> NA HELLO </div>);
+		console.log(cols) ;
 
 		return (
 			this.props.detail == null ? <span/> :

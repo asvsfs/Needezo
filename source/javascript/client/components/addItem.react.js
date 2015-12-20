@@ -13,14 +13,15 @@ export default class AddItem extends Component {
   }
 
 	componentDidMount(){
-
+		var self = this;
 		populateCountries("country", "state");
 
 		http
 		.get("/categorylist")
 		.accept('application/json')
 		.end(function (err, res){
-			this.setState({categoryList:res.body.categoryList});
+			console.log(res)
+			self.setState({categoryList:res.body.categoryList});
 		});
 	}
 
@@ -32,8 +33,8 @@ export default class AddItem extends Component {
 				<a href="#" style={{position:'absolute',right:'1px',top:'1px',textDecoration:'none'}} onClick={self.removeImage.bind(self,i)} key={i+'a'}>x</a>
 				</div>);
 		})
-		const categories = this.state.categoryList.map((cat,i)=>{
-			<Link to="/itemcat/:cat" key={i}>{cat.name}</Link>
+		const categories = self.state.categoryList.map((cat,i)=>{
+			return (<option key={i}>{cat}</option>)
 		})
 		return (
 				<div ref="div" className="addItem" >
@@ -50,7 +51,10 @@ export default class AddItem extends Component {
 						<textarea  id="editArea" ref="description" placeholder="Description of what you need " style={{marginBottom:'15px'}} required></textarea>
 						Select your Country(Optional): <select style={{display:'block'}} id = "country" name="Country" onChange={(e)=>{this.setState({country:e.target.options[e.target.selectedIndex].value})}}></select><br/>
 						Select your State(Optional): <select style={{display:'block',marginBottom:'10px'}} id = "state" onChange={(e)=>{this.setState({state:e.target.options[e.target.selectedIndex].value})}} name="State"></select>
-						Select the Category(Optional): <select style={{display:'block',marginBottom:'10px'}} id = "category" onChange={(e)=>{this.setState({category:e.target.options[e.target.selectedIndex].value})}} name="Category"></select>
+						Select the Category(Optional): 
+						<select style={{display:'block',marginBottom:'10px'}} id = "category" onChange={(e)=>{this.setState({category:e.target.options[e.target.selectedIndex].value})}} name="Category">
+							{categories}
+						</select>
 
 						<input type="checkbox" name="location" ref="location" value="Location" id="location" onChange={this.onLocationOptionChange.bind(self)} style={{marginBottom:'10px'}}/> Use my location
 						<span style={{fontSize:"10px" }}> we dont use your exact location, and nobody is able to see it </span>
@@ -84,7 +88,6 @@ export default class AddItem extends Component {
 			description:this.refs.description.value,
 			imageUrls:self.state.Urls,
 			country:this.state.country,
-			//price:this.refs.price.value,
 			state:this.state.state,
 			location:{x,y}
 		}

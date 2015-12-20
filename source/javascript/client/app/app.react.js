@@ -155,7 +155,7 @@ export default class App extends Component {
 
 				<SearchBox loading={this.loading.bind(this)}/>
 				{funcs}
-				<Link to={`/`} style={{display:'inline',textDecoration:'none',fontWeight:'600',fontSize:'14px',fontFamily:'Open Sans, sans-serif',marginRight:'10px'}} > Home</Link>
+				<Link to={`/`} onClick={this.onHomeClicked.bind(this)} style={{display:'inline',textDecoration:'none',fontWeight:'600',fontSize:'14px',fontFamily:'Open Sans, sans-serif',marginRight:'10px'}} > Home</Link>
 			</div>
 
 

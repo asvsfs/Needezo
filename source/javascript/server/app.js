@@ -19,10 +19,10 @@ var express           =     require('express')
   , uuid              =     require('node-uuid')
   // , Hapi            =     require('hapi')
   , bcrypt = require('bcrypt-nodejs')
-  , moment = require('moment');
-
-
-
+  , moment = require('moment')
+  , ReactDOMServer = require("react-dom/server");
+  var React = require("react")
+  var Item = require("../client/pages/item.react.js");
 
 var geocoderProvider = 'google';
 var httpAdapter = 'https';
@@ -95,10 +95,8 @@ app.use(express.static('public'));
 
 //Router code
 app.all('/tk/*',ensureAuthenticated,function(req, res, next){
-  console.log(req.body)
   // check header or url parameters or post parameters for token
   var token = req.body.token || req.query.token || req.headers['x-access-token'] || req.cookies.token;
-
   // decode token
   if (token) {
     // verifies secret and checks exp
@@ -113,7 +111,6 @@ app.all('/tk/*',ensureAuthenticated,function(req, res, next){
     });
 
   } else {
-
     // if there is no token
     // return an error
     return res.status(403).send({ 
@@ -122,8 +119,6 @@ app.all('/tk/*',ensureAuthenticated,function(req, res, next){
     });
     
   }
-
-  console.log("END AUTH")
 });
 
 app.get('/', function(req, res){
@@ -741,7 +736,6 @@ app.get('/activate/:linkId',function(req, res){
 
 app.post('/oauth2callback',function(req,res){
 
-  console.log("SOMEHITN CAME")
 })
 
 app.post('/tk/question',function(req,res){
@@ -830,15 +824,31 @@ app.get('/item/:itemid', function (req,res) {
     .select({ title:1 , description:1 , imageUrl: 1,questions : 1,userId : 1})
     .exec(function (err, doc){
       if(err){return res.send("Something went wrong");}
+        var test = new ObjectId(doc.id)
+        test= test.toString()+ "";
+
       if(req.user._id != doc.userId){
         console.log("user is different")
         doc.questions = [];
+
         doc.userId = "";
       }
+
+      var item={_id:test,description:doc.description,title:doc.title,imageUrl:doc.imageUrl.length == 0 ? "{}": doc.imageUrl,questions:doc.questions.length == 0 ? "{}" : doc.questions,userId:doc.userId};
       console.log(doc)
       console.log(req.user)
-      res.render("item",{item:doc});  
+
+      var renderedItem ="Something went wrong at the server";
+
+      try{
+        renderedItem = ReactDOMServer.renderToString(<Item item={doc}/>);
+      }catch(e){
+        console.log(e);
+      }
+
+      res.render("item",{item:renderedItem,props:JSON.stringify(doc)});  
     })
+
   });
 })
 
